@@ -169,6 +169,8 @@ public class FragmentRecycler extends Fragment {
             if (selected) {
 
                 countseats.add(Integer.parseInt(lbl)+-1);
+            } else {
+                countseats.remove(Integer.parseInt(lbl)+-1);
             }
 
             Toast.makeText(recyclerActivity, lbl, Toast.LENGTH_SHORT).show();
