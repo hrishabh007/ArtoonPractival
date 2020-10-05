@@ -1,8 +1,8 @@
 package com.app.artoonpractival.Fragment;
 
-
 import android.os.Bundle;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,13 +10,16 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 
+import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProviders;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.app.artoonpractival.CommonUtils.Prefs;
 import com.app.artoonpractival.Database.BookedSeats;
-import com.app.artoonpractival.Database.DBReservedSeats;
+
 import com.app.artoonpractival.R;
 import com.app.artoonpractival.Ui.RecyclerActivity;
 import com.app.artoonpractival.SeatBooking.AbstractItem;
@@ -28,7 +31,9 @@ import com.app.artoonpractival.SeatBooking.EmptyItem;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 
 public class FragmentRecycler extends Fragment {
@@ -48,6 +53,10 @@ public class FragmentRecycler extends Fragment {
     private AirplaneAdapter adapter;
     List<Integer> countseats = new ArrayList<>();
 
+    private FragmentRecyclerViewModel recyclerViewModel;
+
+    private ArrayList<BookedSeats> bookedSeat =new ArrayList<>();
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -58,17 +67,43 @@ public class FragmentRecycler extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-
+        recyclerViewModel = ViewModelProviders.of(this).get(FragmentRecyclerViewModel.class);
         view = inflater.inflate(R.layout.fragment_recycler, container, false);
         /*recyclerView = (RecyclerView) view.findViewById(R.id.recycler_view);*/
 
         txtSeatSelected = (TextView) view.findViewById(R.id.txt_seat_selected);
 
-        List<BookedSeats> bookedSeats = new DBReservedSeats(recyclerActivity).getallseats();
-        List<Integer> values = new ArrayList<>();
-        for (int i = 0; i < bookedSeats.size(); i++) {
-            values.add(bookedSeats.get(i).getReservednumbers());
+
+        //  bookedSeat= (ArrayList<BookedSeats>) recyclerViewModel.getAllbookedseats();
+
+        try {
+            bookedSeat= (ArrayList<BookedSeats>) recyclerViewModel.getAllbookedseats();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
+     /*   recyclerViewModel.getAllbookedseats().observe(recyclerActivity, new Observer<List<BookedSeats>>() {
+            @Override
+            public void onChanged(@Nullable List<BookedSeats> categories) {
+
+              //  bookedSeat = (ArrayList<BookedSeats>) categories;
+                for (BookedSeats c : categories) {
+                    bookedSeat.add(c);
+                    Log.i("MyTAG", String.valueOf(c.getReservednumbers()));
+                }
+
+            }
+        });*/
+
+
+        List<Integer> values = new ArrayList<>();
+        if (bookedSeat != null) {
+            for (int i = 0; i < bookedSeat.size(); i++) {
+                values.add(bookedSeat.get(i).getReservednumbers());
+            }
+        }
+
 
         BOOKED = new Integer[values.size()];
         BOOKED = values.toArray(BOOKED);
@@ -81,11 +116,16 @@ public class FragmentRecycler extends Fragment {
                 itemsArray = countseats.toArray(itemsArray);
 
                 for (Integer s : itemsArray) {
-                    new DBReservedSeats(recyclerActivity).addReservedSeats(Prefs.getString("email", ""), s, Prefs.getInt("id", 1));
+                    BookedSeats bookedSeats = new BookedSeats();
+                    bookedSeats.setReservednumbers(s);
+                    bookedSeats.setEmail(Prefs.getString("email", ""));
+                    bookedSeats.setUserId(Prefs.getInt("id", 1));
+                    recyclerViewModel.addseats(bookedSeats);
+                    //  new DBReservedSeats(recyclerActivity).addReservedSeats(Prefs.getString("email", ""), s, Prefs.getInt("id", 1));
                 }
 
                 countseats.clear();
-               // adapter.notifyDataSetChanged();
+                // adapter.notifyDataSetChanged();
                 recyclerActivity.recreate();
             }
         });
@@ -98,10 +138,17 @@ public class FragmentRecycler extends Fragment {
         List<AbstractItem> items = new ArrayList<>();
         int t_counter = 0;
         for (int i = 0; i < COLUMNS * TOP_FULL_COL; i++) {
-            if (contains(BOOKED, t_counter))
-                items.add(new BookedItem(String.valueOf(++t_counter)));
-            else
+
+            if (bookedSeat != null) {
+                if (contains(BOOKED, t_counter))
+                    items.add(new BookedItem(String.valueOf(++t_counter)));
+                else
+                    items.add(new CenterItem(String.valueOf(++t_counter)));
+
+            } else {
                 items.add(new CenterItem(String.valueOf(++t_counter)));
+            }
+
 
         }
 
@@ -121,20 +168,32 @@ public class FragmentRecycler extends Fragment {
 
                 items.add(new EmptyItem(String.valueOf(i)));
             } else {
-
-                if (contains(BOOKED, t_counter))
-                    items.add(new BookedItem(String.valueOf(++t_counter)));
-                else
+                if (bookedSeat != null) {
+                    if (contains(BOOKED, t_counter))
+                        items.add(new BookedItem(String.valueOf(++t_counter)));
+                    else
+                        items.add(new CenterItem(String.valueOf(+ ++t_counter)));
+                } else {
                     items.add(new CenterItem(String.valueOf(+ ++t_counter)));
+                }
+
             }
 
 
         }
         for (int i = 0; i < COLUMNS * BOT_FULL_COL; i++) {
-            if (contains(BOOKED, t_counter))
+            if (bookedSeat != null) {
+                if (contains(BOOKED, t_counter))
+                    items.add(new BookedItem(String.valueOf(++t_counter)));
+                else
+                    items.add(new CenterItem(String.valueOf(+ ++t_counter)));
+            } else {
+                items.add(new CenterItem(String.valueOf(+ ++t_counter)));
+            }
+            /*if (contains(BOOKED, t_counter))
                 items.add(new BookedItem(String.valueOf(++t_counter)));
             else
-                items.add(new CenterItem(String.valueOf(+ ++t_counter)));
+                items.add(new CenterItem(String.valueOf(+ ++t_counter)));*/
 
         }
 
@@ -156,7 +215,10 @@ public class FragmentRecycler extends Fragment {
 
 
     public boolean contains(final Integer[] array, final int key) {
-        Arrays.sort(array);
+        if (array != null) {
+            Arrays.sort(array);
+
+        }
         return Arrays.binarySearch(array, key) >= 0;
     }
 
@@ -168,9 +230,7 @@ public class FragmentRecycler extends Fragment {
 
             if (selected) {
 
-                countseats.add(Integer.parseInt(lbl)+-1);
-            } else {
-                countseats.remove(Integer.parseInt(lbl)+-1);
+                countseats.add(Integer.parseInt(lbl) + -1);
             }
 
             Toast.makeText(recyclerActivity, lbl, Toast.LENGTH_SHORT).show();
@@ -180,6 +240,4 @@ public class FragmentRecycler extends Fragment {
     };
 
 
-
 }
-

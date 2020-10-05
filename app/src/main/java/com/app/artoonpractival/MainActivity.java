@@ -11,6 +11,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.app.artoonpractival.CommonUtils.PrefKeys;
 import com.app.artoonpractival.CommonUtils.Prefs;
+import com.app.artoonpractival.Database.UserRepository;
 import com.app.artoonpractival.Ui.RecyclerActivity;
 
 import butterknife.BindView;
@@ -32,11 +33,15 @@ public class MainActivity extends AppCompatActivity {
     @BindView(R.id.createAccount)
     TextView createAccount;
 
+
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
+
         if (MyApp.isLogin()) {
             Intent intent = new Intent(getBaseContext(), RecyclerActivity.class);
             startActivity(intent);
